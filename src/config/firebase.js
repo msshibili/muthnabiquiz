@@ -14,30 +14,28 @@ import {
   updateDoc, 
   collection, 
   getDocs, 
+  onSnapshot,
   query, 
   where, 
   orderBy,
   addDoc
 } from 'firebase/firestore';
 
-// Default Firebase Configuration (can be overridden by environment variables)
+// Active Firebase Configuration for muthnabiquiz project
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDummyKey_ReplaceWithYourFirebaseApiKey",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "muthnabi-quiz-26.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "muthnabi-quiz-26",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "muthnabi-quiz-26.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789012",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789012:web:abc123def456"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDwMY1OmwnUnXGUN0zNNOLT9mN3eFIDzuA",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "muthnabiquiz.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "muthnabiquiz",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "muthnabiquiz.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1092882783548",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1092882783548:web:f37794565ba0c6c10dd239"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Check if real Firebase keys are configured
-export const isRealFirebaseConfigured = Boolean(
-  import.meta.env.VITE_FIREBASE_API_KEY && 
-  import.meta.env.VITE_FIREBASE_API_KEY !== "AIzaSyDummyKey_ReplaceWithYourFirebaseApiKey"
-);
+// Real Firebase is 100% active on all devices & deployments
+export const isRealFirebaseConfigured = true;
 
 export default app;
