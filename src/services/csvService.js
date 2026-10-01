@@ -100,5 +100,42 @@ export const csvService = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  /**
+   * Export Registered Contestants Details to CSV
+   */
+  exportUsersToCsv(usersList, attemptsList = []) {
+    if (!usersList || usersList.length === 0) {
+      alert('No contestant records available to export.');
+      return;
+    }
+
+    const formattedData = usersList.map((u, i) => {
+      const userAttempts = attemptsList.filter(a => a.userId === u.uid);
+      const attemptsSummary = userAttempts.map(a => `${a.quizTitle}: ${a.score}/${a.maxScore} (${a.percentage}%)`).join(' | ');
+
+      return {
+        'S.No': i + 1,
+        'Full Name': u.name || 'N/A',
+        'Mobile Number': u.mobile || 'N/A',
+        'Year / Semester': u.year || 'S1',
+        'Engineering Branch': u.branch || 'CSE',
+        'Registration Date': u.createdAt ? new Date(u.createdAt).toLocaleString('en-IN') : 'N/A',
+        'Quizzes Attempted Count': userAttempts.length,
+        'Attempt Details & Scores': attemptsSummary || 'No attempts yet'
+      };
+    });
+
+    const csvContent = Papa.unparse(formattedData);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `registered_contestants_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 };

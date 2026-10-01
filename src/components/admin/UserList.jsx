@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { formatDate } from '../../utils/formatters';
-import { Search, Users, Phone, Calendar } from 'lucide-react';
+import { Search, Users, Phone, Calendar, Download } from 'lucide-react';
+import { csvService } from '../../services/csvService';
 
 export default function UserList({ users, attempts }) {
   const [search, setSearch] = useState('');
@@ -12,13 +13,21 @@ export default function UserList({ users, attempts }) {
     );
   });
 
+  const handleExportCsv = () => {
+    csvService.exportUsersToCsv(users, attempts);
+  };
+
   return (
     <div className="user-list-container">
-      <div className="manager-header">
+      <div className="manager-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2>Registered Contestants</h2>
           <p>Total {users.length} registered students</p>
         </div>
+        <button className="btn-secondary" onClick={handleExportCsv} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Download size={16} />
+          <span>Export Contestants CSV</span>
+        </button>
       </div>
 
       <div className="results-toolbar">
