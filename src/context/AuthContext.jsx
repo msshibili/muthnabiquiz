@@ -25,9 +25,9 @@ export function AuthProvider({ children }) {
     }, 4000);
   };
 
-  const registerUser = async (name, phone) => {
+  const registerUser = async (name, phone, year, branch) => {
     try {
-      const userProfile = await authService.registerUser(name, phone);
+      const userProfile = await authService.registerUser(name, phone, year, branch);
       setUser(userProfile);
       showToast(`Welcome, ${userProfile.name}! Registration successful.`, 'success');
       return userProfile;

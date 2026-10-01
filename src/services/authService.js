@@ -36,9 +36,9 @@ export const authService = {
   },
 
   /**
-   * Directly register or login user with Full Name & Mobile Number (No OTP required)
+   * Directly register or login user with Full Name, Mobile Number, Year, and Branch
    */
-  async registerUser(name, phoneNumber) {
+  async registerUser(name, phoneNumber, year = 'S1', branch = 'CSE') {
     const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber.replace(/\D/g, '')}`;
     const uid = `usr_${formattedPhone.replace(/\D/g, '')}`;
 
@@ -46,6 +46,8 @@ export const authService = {
       uid,
       name: name || 'Participant',
       mobile: formattedPhone,
+      year,
+      branch,
       createdAt: new Date().toISOString(),
       role: 'user'
     };
@@ -60,6 +62,8 @@ export const authService = {
         } else {
           const existing = userSnap.data();
           userData.name = existing.name || userData.name;
+          userData.year = existing.year || userData.year;
+          userData.branch = existing.branch || userData.branch;
         }
       } catch (e) {
         console.warn('Firestore user write error:', e);

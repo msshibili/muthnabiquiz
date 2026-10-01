@@ -8,6 +8,8 @@ export default function AuthModal({ isOpen, onClose }) {
   
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
+  const [year, setYear] = useState('S1');
+  const [branch, setBranch] = useState('CSE');
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -26,10 +28,12 @@ export default function AuthModal({ isOpen, onClose }) {
 
     setLoading(true);
     try {
-      await registerUser(name, mobile);
+      await registerUser(name, mobile, year, branch);
       onClose();
       setName('');
       setMobile('');
+      setYear('S1');
+      setBranch('CSE');
     } catch (err) {
       console.error(err);
     } finally {
@@ -117,8 +121,42 @@ export default function AuthModal({ isOpen, onClose }) {
                   required 
                 />
               </div>
-              <small className="field-hint">Your mobile number remains strictly private and hidden from public leaderboards.</small>
             </div>
+
+            <div className="form-grid-2">
+              <div className="input-field-group">
+                <label>Year / Semester *</label>
+                <select 
+                  value={year} 
+                  onChange={(e) => setYear(e.target.value)}
+                  className="auth-select"
+                  required
+                >
+                  <option value="S1">S1 (1st Year)</option>
+                  <option value="S3">S3 (2nd Year)</option>
+                  <option value="S5">S5 (3rd Year)</option>
+                  <option value="S7">S7 (4th Year)</option>
+                </select>
+              </div>
+
+              <div className="input-field-group">
+                <label>Engineering Branch *</label>
+                <select 
+                  value={branch} 
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="auth-select"
+                  required
+                >
+                  <option value="CSE">CSE</option>
+                  <option value="ECE">ECE</option>
+                  <option value="EEE">EEE</option>
+                  <option value="MECH">MECH</option>
+                  <option value="CIVIL">CIVIL</option>
+                </select>
+              </div>
+            </div>
+
+            <small className="field-hint">Your mobile number remains strictly private and hidden from public leaderboards.</small>
 
             <button type="submit" className="btn-primary full-width" disabled={loading}>
               {loading ? 'Creating Account...' : 'Register & Enter Arena'}

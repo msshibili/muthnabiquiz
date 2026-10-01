@@ -47,6 +47,8 @@ export default function UserList({ users, attempts }) {
                 <th>#</th>
                 <th>Full Name</th>
                 <th>Mobile Number</th>
+                <th>Year / Sem</th>
+                <th>Branch</th>
                 <th>Registration Date</th>
                 <th>Quiz Participation History</th>
               </tr>
@@ -58,7 +60,9 @@ export default function UserList({ users, attempts }) {
                   <tr key={u.uid || idx}>
                     <td>{idx + 1}</td>
                     <td><strong>{u.name || 'Contestant'}</strong></td>
-                    <td>{u.mobile}</td>
+                    <td><span className="phone-code-chip">{u.mobile}</span></td>
+                    <td><span className="sem-chip">{u.year || 'S1'}</span></td>
+                    <td><span className="branch-chip">{u.branch || 'CSE'}</span></td>
                     <td>{formatDate(u.createdAt)}</td>
                     <td>
                       {userAttempts.length > 0 ? (

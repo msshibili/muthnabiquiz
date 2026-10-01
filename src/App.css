@@ -1239,6 +1239,46 @@
   border-color: var(--accent);
 }
 
+.auth-select {
+  width: 100%;
+  background: var(--secondary);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.auth-select:focus {
+  border-color: var(--accent);
+}
+
+.auth-select option {
+  background: #1c1812;
+  color: #fff;
+}
+
+.sem-chip {
+  background: rgba(245, 191, 83, 0.18);
+  color: var(--accent);
+  border: 1px solid rgba(245, 191, 83, 0.3);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+}
+
+.branch-chip {
+  background: rgba(197, 34, 31, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(197, 34, 31, 0.4);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+}
+
 .field-hint {
   font-size: 0.72rem;
   color: var(--text-dim);
