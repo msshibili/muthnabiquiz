@@ -8,8 +8,9 @@ const QUIZZES_STORAGE_KEY = 'muthnabi_quizzes_data';
 const QUESTIONS_STORAGE_KEY = 'muthnabi_questions_data';
 const ATTEMPTS_STORAGE_KEY = 'muthnabi_attempts_data';
 const ACTIVE_TIMERS_KEY = 'muthnabi_active_timers';
+const SEEDED_FLAG_KEY = 'muthnabi_firestore_seeded_v2';
 
-// Storage Helper Functions
+// Helper storage functions
 function getStoredData(key, fallback) {
   const data = localStorage.getItem(key);
   if (data) return JSON.parse(data);
@@ -34,12 +35,19 @@ export const quizService = {
         querySnapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...docSnap.data() });
         });
-        if (list.length > 0) return list;
 
-        // Auto-seed initial quizzes to Firestore on first load
+        const isSeeded = localStorage.getItem(SEEDED_FLAG_KEY);
+        if (list.length > 0 || isSeeded) {
+          saveStoredData(QUIZZES_STORAGE_KEY, list);
+          return list;
+        }
+
+        // Initial 1-time seed to Firestore if database is completely empty
         for (const q of INITIAL_QUIZZES) {
           await setDoc(doc(db, 'quizzes', q.id), q);
         }
+        localStorage.setItem(SEEDED_FLAG_KEY, 'true');
+        saveStoredData(QUIZZES_STORAGE_KEY, INITIAL_QUIZZES);
         return INITIAL_QUIZZES;
       } catch (e) {
         console.warn('Firestore getQuizzes error:', e);
@@ -54,43 +62,49 @@ export const quizService = {
   },
 
   async saveQuiz(quizData) {
-    const quizzes = await this.getQuizzes();
-    const existingIndex = quizzes.findIndex(q => q.id === quizData.id);
+    const quizId = quizData.id || `quiz-${Date.now()}`;
     const updatedQuiz = {
       ...quizData,
-      id: quizData.id || `quiz-${Date.now()}`,
+      id: quizId,
       createdAt: quizData.createdAt || new Date().toISOString()
     };
 
-    if (existingIndex >= 0) {
-      quizzes[existingIndex] = updatedQuiz;
-    } else {
-      quizzes.push(updatedQuiz);
-    }
-
     if (isRealFirebaseConfigured) {
       try {
-        await setDoc(doc(db, 'quizzes', updatedQuiz.id), updatedQuiz);
+        await setDoc(doc(db, 'quizzes', quizId), updatedQuiz);
       } catch (e) {
         console.warn('Firestore saveQuiz error:', e);
       }
     }
 
+    let quizzes = getStoredData(QUIZZES_STORAGE_KEY, []);
+    const idx = quizzes.findIndex(q => q.id === quizId);
+    if (idx >= 0) {
+      quizzes[idx] = updatedQuiz;
+    } else {
+      quizzes.push(updatedQuiz);
+    }
     saveStoredData(QUIZZES_STORAGE_KEY, quizzes);
+
     return updatedQuiz;
   },
 
   async deleteQuiz(quizId) {
-    let quizzes = await this.getQuizzes();
-    quizzes = quizzes.filter(q => q.id !== quizId);
-
     if (isRealFirebaseConfigured) {
       try {
         await deleteDoc(doc(db, 'quizzes', quizId));
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Firestore deleteQuiz error:', e);
+      }
     }
 
+    let quizzes = getStoredData(QUIZZES_STORAGE_KEY, []);
+    quizzes = quizzes.filter(q => q.id !== quizId);
     saveStoredData(QUIZZES_STORAGE_KEY, quizzes);
+
+    let questionsMap = getStoredData(QUESTIONS_STORAGE_KEY, {});
+    delete questionsMap[quizId];
+    saveStoredData(QUESTIONS_STORAGE_KEY, questionsMap);
   },
 
   async duplicateQuiz(quizId) {
@@ -108,7 +122,6 @@ export const quizService = {
 
     await this.saveQuiz(duplicatedQuiz);
 
-    // Also copy questions for this quiz
     const questions = await this.getQuestions(quizId, true);
     if (questions && questions.length > 0) {
       const duplicatedQuestions = questions.map((q, idx) => ({
@@ -126,7 +139,7 @@ export const quizService = {
   // ==========================================
 
   async getQuestions(quizId, isAdmin = false) {
-    let allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, INITIAL_QUESTIONS);
+    let rawQuestions = [];
     
     if (isRealFirebaseConfigured) {
       try {
@@ -135,22 +148,27 @@ export const quizService = {
         querySnapshot.forEach(docSnap => {
           list.push({ id: docSnap.id, ...docSnap.data() });
         });
-        if (list.length > 0) {
-          allQuestionsMap[quizId] = list;
+
+        const isSeeded = localStorage.getItem(`${SEEDED_FLAG_KEY}_${quizId}`);
+        if (list.length > 0 || isSeeded) {
+          rawQuestions = list;
         } else if (INITIAL_QUESTIONS[quizId]) {
-          // Auto-seed questions for this quiz to Firestore
           const seedList = INITIAL_QUESTIONS[quizId];
           for (const q of seedList) {
             await setDoc(doc(db, `quizzes/${quizId}/questions`, q.id), q);
           }
-          allQuestionsMap[quizId] = seedList;
+          localStorage.setItem(`${SEEDED_FLAG_KEY}_${quizId}`, 'true');
+          rawQuestions = seedList;
         }
       } catch (e) {
         console.warn('Firestore getQuestions error:', e);
       }
     }
 
-    const rawQuestions = allQuestionsMap[quizId] || [];
+    if (rawQuestions.length === 0) {
+      const allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, INITIAL_QUESTIONS);
+      rawQuestions = allQuestionsMap[quizId] || [];
+    }
 
     // STRICT SECURITY FILTERING:
     // Non-admin participant queries MUST NOT include the correctAnswer!
@@ -165,33 +183,33 @@ export const quizService = {
   },
 
   async saveQuestion(quizId, questionData) {
-    const allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, INITIAL_QUESTIONS);
-    const quizQuestions = allQuestionsMap[quizId] || [];
-    
     const questionId = questionData.id || `q-${Date.now()}`;
     const updatedQuestion = { ...questionData, id: questionId };
 
+    if (isRealFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, `quizzes/${quizId}/questions`, questionId), updatedQuestion);
+      } catch (e) {
+        console.warn('Firestore saveQuestion error:', e);
+      }
+    }
+
+    const allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, {});
+    const quizQuestions = allQuestionsMap[quizId] || [];
     const idx = quizQuestions.findIndex(q => q.id === questionId);
     if (idx >= 0) {
       quizQuestions[idx] = updatedQuestion;
     } else {
       quizQuestions.push(updatedQuestion);
     }
-
     allQuestionsMap[quizId] = quizQuestions;
-
-    if (isRealFirebaseConfigured) {
-      try {
-        await setDoc(doc(db, `quizzes/${quizId}/questions`, questionId), updatedQuestion);
-      } catch (e) {}
-    }
-
     saveStoredData(QUESTIONS_STORAGE_KEY, allQuestionsMap);
 
-    // Update total questions count on quiz
+    // Update total questions count on quiz in Firestore
+    const currentQuestions = await this.getQuestions(quizId, true);
     const quiz = await this.getQuizById(quizId);
     if (quiz) {
-      quiz.totalQuestions = quizQuestions.length;
+      quiz.totalQuestions = currentQuestions.length;
       await this.saveQuiz(quiz);
     }
 
@@ -199,38 +217,42 @@ export const quizService = {
   },
 
   async deleteQuestion(quizId, questionId) {
-    const allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, INITIAL_QUESTIONS);
+    if (isRealFirebaseConfigured) {
+      try {
+        await deleteDoc(doc(db, `quizzes/${quizId}/questions`, questionId));
+      } catch (e) {
+        console.warn('Firestore deleteQuestion error:', e);
+      }
+    }
+
+    const allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, {});
     if (allQuestionsMap[quizId]) {
       allQuestionsMap[quizId] = allQuestionsMap[quizId].filter(q => q.id !== questionId);
       saveStoredData(QUESTIONS_STORAGE_KEY, allQuestionsMap);
     }
 
-    if (isRealFirebaseConfigured) {
-      try {
-        await deleteDoc(doc(db, `quizzes/${quizId}/questions`, questionId));
-      } catch (e) {}
-    }
-
-    // Update quiz total questions count
+    const remainingQuestions = await this.getQuestions(quizId, true);
     const quiz = await this.getQuizById(quizId);
     if (quiz) {
-      quiz.totalQuestions = (allQuestionsMap[quizId] || []).length;
+      quiz.totalQuestions = remainingQuestions.length;
       await this.saveQuiz(quiz);
     }
   },
 
   async saveAllQuestionsForQuiz(quizId, questionsList) {
-    const allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, INITIAL_QUESTIONS);
-    allQuestionsMap[quizId] = questionsList;
-    saveStoredData(QUESTIONS_STORAGE_KEY, allQuestionsMap);
-
     if (isRealFirebaseConfigured) {
       try {
         for (const q of questionsList) {
           await setDoc(doc(db, `quizzes/${quizId}/questions`, q.id), q);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Firestore saveAllQuestionsForQuiz error:', e);
+      }
     }
+
+    const allQuestionsMap = getStoredData(QUESTIONS_STORAGE_KEY, {});
+    allQuestionsMap[quizId] = questionsList;
+    saveStoredData(QUESTIONS_STORAGE_KEY, allQuestionsMap);
 
     const quiz = await this.getQuizById(quizId);
     if (quiz) {
@@ -281,12 +303,6 @@ export const quizService = {
   async getUserAttempt(userId, quizId) {
     if (!userId || !quizId) return null;
     
-    // 1. Check LocalStorage
-    const attempts = getStoredData(ATTEMPTS_STORAGE_KEY, INITIAL_SAMPLE_ATTEMPTS);
-    const localAttempt = attempts.find(a => a.userId === userId && a.quizId === quizId);
-    if (localAttempt) return localAttempt;
-
-    // 2. Check Firestore
     if (isRealFirebaseConfigured) {
       try {
         const attemptId = `${userId}_${quizId}`;
@@ -299,20 +315,20 @@ export const quizService = {
       }
     }
 
-    return null;
+    const attempts = getStoredData(ATTEMPTS_STORAGE_KEY, []);
+    return attempts.find(a => a.userId === userId && a.quizId === quizId) || null;
   },
 
   async submitQuizAttempt(user, quizId, userAnswers) {
     const userId = user.uid;
     
-    // Security check: One attempt only!
     const existingAttempt = await this.getUserAttempt(userId, quizId);
     if (existingAttempt) {
-      return existingAttempt; // Prevent duplicate attempt calculation
+      return existingAttempt;
     }
 
     const quiz = await this.getQuizById(quizId);
-    const questions = await this.getQuestions(quizId, true); // Fetch master questions with answers securely
+    const questions = await this.getQuestions(quizId, true);
 
     let score = 0;
     let maxScore = 0;
@@ -345,7 +361,6 @@ export const quizService = {
       }
     });
 
-    // Calculate time taken
     const timerData = this.getOrStartTimer(userId, quizId, quiz?.duration || 10);
     const startedAt = timerData.startedAt;
     const submittedAt = new Date().toISOString();
@@ -358,6 +373,8 @@ export const quizService = {
       userId,
       userName: user.name || 'Participant',
       userMobile: user.mobile || 'Private',
+      userYear: user.year || 'S1',
+      userBranch: user.branch || 'CSE',
       quizId,
       quizTitle: quiz?.title || 'Competition Quiz',
       score,
@@ -370,15 +387,6 @@ export const quizService = {
       submittedAt
     };
 
-    // Store attempt in LocalStorage
-    const attempts = getStoredData(ATTEMPTS_STORAGE_KEY, INITIAL_SAMPLE_ATTEMPTS);
-    attempts.push(attemptRecord);
-    saveStoredData(ATTEMPTS_STORAGE_KEY, attempts);
-
-    // Clear active timer session
-    this.clearActiveTimer(userId, quizId);
-
-    // Save attempt in Firestore
     if (isRealFirebaseConfigured) {
       try {
         await setDoc(doc(db, 'quizAttempts', attemptRecord.id), attemptRecord);
@@ -387,11 +395,15 @@ export const quizService = {
       }
     }
 
+    const attempts = getStoredData(ATTEMPTS_STORAGE_KEY, []);
+    attempts.push(attemptRecord);
+    saveStoredData(ATTEMPTS_STORAGE_KEY, attempts);
+
+    this.clearActiveTimer(userId, quizId);
     return attemptRecord;
   },
 
   async getAllAttempts() {
-    let list = getStoredData(ATTEMPTS_STORAGE_KEY, INITIAL_SAMPLE_ATTEMPTS);
     if (isRealFirebaseConfigured) {
       try {
         const querySnapshot = await getDocs(collection(db, 'quizAttempts'));
@@ -399,17 +411,19 @@ export const quizService = {
         querySnapshot.forEach(docSnap => {
           firestoreList.push({ id: docSnap.id, ...docSnap.data() });
         });
-        if (firestoreList.length > 0) return firestoreList;
-      } catch (e) {}
+        saveStoredData(ATTEMPTS_STORAGE_KEY, firestoreList);
+        return firestoreList;
+      } catch (e) {
+        console.warn('Firestore getAllAttempts error:', e);
+      }
     }
-    return list;
+    return getStoredData(ATTEMPTS_STORAGE_KEY, []);
   },
 
   async getLeaderboard(quizId) {
     const allAttempts = await this.getAllAttempts();
     const quizAttempts = allAttempts.filter(a => a.quizId === quizId);
 
-    // Sort by: 1. Higher Score, 2. Lower Completion Time
     quizAttempts.sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score;
