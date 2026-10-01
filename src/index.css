@@ -1,0 +1,87 @@
+/* Reset and Base Theme Setup - Muthnabi Mega Quiz 26 Color System */
+:root {
+  --bg-main: #0f0c08;
+  --bg-card: rgba(24, 20, 15, 0.9);
+  --bg-card-hover: rgba(38, 30, 22, 0.95);
+  --border-color: rgba(245, 191, 83, 0.2);
+  --border-color-glow: rgba(245, 191, 83, 0.5);
+  
+  /* Deep Crimson Red from MUTH NABI typography */
+  --primary: #c5221f;
+  --primary-hover: #a51b18;
+  --primary-light: rgba(197, 34, 31, 0.2);
+  
+  /* Warm Gold / Amber from Logo Badge */
+  --accent: #f5bf53;
+  --accent-hover: #eab308;
+  --accent-glow: rgba(245, 191, 83, 0.35);
+
+  --secondary: #241e15;
+  --secondary-hover: #332b1f;
+
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.18);
+  --warning: #f5bf53;
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.18);
+
+  --text-main: #ffffff;
+  --text-gold: #fef08a;
+  --text-muted: #d1d5db;
+  --text-dim: #9ca3af;
+
+  --font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 25px rgba(245, 191, 83, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: #332b1f;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input, select, textarea {
+  font-family: inherit;
+  outline: none;
+}
