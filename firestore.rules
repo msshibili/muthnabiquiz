@@ -12,14 +12,14 @@ service cloud.firestore {
       }
     }
     
-    // Participant User Profiles
+    // Participant User Profiles (allow read, write - including create, update, delete)
     match /users/{userId} {
-      allow read, create, update: if true;
+      allow read, write: if true;
     }
     
-    // Quiz Attempts & Leaderboards
+    // Quiz Attempts & Leaderboards (allow read, write - including create, update, delete)
     match /quizAttempts/{attemptId} {
-      allow read, create, update: if true;
+      allow read, write: if true;
     }
   }
 }

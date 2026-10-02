@@ -11,7 +11,10 @@ import {
   LayoutDashboard, BookOpen, Trophy, Users, Shield, Plus, LogOut, Sparkles, ChevronRight, Award 
 } from 'lucide-react';
 
+import { useAuth } from '../../context/AuthContext';
+
 export default function AdminDashboard({ onLaunchPreview, onExitAdmin }) {
+  const { showToast } = useAuth();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'quizzes', 'questions', 'results', 'users'
   const [quizzes, setQuizzes] = useState([]);
   const [users, setUsers] = useState([]);
@@ -48,7 +51,8 @@ export default function AdminDashboard({ onLaunchPreview, onExitAdmin }) {
       await quizService.saveQuiz(quizData);
       setShowQuizModal(false);
       setEditingQuiz(null);
-      loadAllAdminData();
+      await loadAllAdminData();
+      if (showToast) showToast('Quiz saved successfully!', 'success');
     } catch (err) {
       console.error(err);
     }
@@ -58,7 +62,8 @@ export default function AdminDashboard({ onLaunchPreview, onExitAdmin }) {
     if (!window.confirm('Are you sure you want to delete this quiz competition?')) return;
     try {
       await quizService.deleteQuiz(quizId);
-      loadAllAdminData();
+      await loadAllAdminData();
+      if (showToast) showToast('Quiz deleted successfully!', 'info');
     } catch (err) {
       console.error(err);
     }
@@ -68,9 +73,11 @@ export default function AdminDashboard({ onLaunchPreview, onExitAdmin }) {
     if (!window.confirm(`Are you sure you want to delete contestant "${userName || 'User'}"? This action cannot be undone.`)) return;
     try {
       await authService.deleteUser(userId);
-      loadAllAdminData();
+      await loadAllAdminData();
+      if (showToast) showToast(`Contestant ${userName ? `"${userName}"` : ''} deleted successfully!`, 'success');
     } catch (err) {
       console.error(err);
+      if (showToast) showToast('Failed to delete contestant.', 'error');
     }
   };
 
@@ -79,9 +86,11 @@ export default function AdminDashboard({ onLaunchPreview, onExitAdmin }) {
     if (!window.confirm(`Are you sure you want to delete ${userIds.length} selected contestant(s)? This action cannot be undone.`)) return;
     try {
       await authService.deleteUsers(userIds);
-      loadAllAdminData();
+      await loadAllAdminData();
+      if (showToast) showToast(`${userIds.length} contestants deleted successfully!`, 'success');
     } catch (err) {
       console.error(err);
+      if (showToast) showToast('Failed to delete selected contestants.', 'error');
     }
   };
 

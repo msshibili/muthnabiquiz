@@ -1,6 +1,6 @@
 import { auth, db, isRealFirebaseConfigured } from '../config/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, query, where } from 'firebase/firestore';
 
 const LOCAL_USERS_KEY = 'muthnabi_quiz_users';
 const LOCAL_CURRENT_USER_KEY = 'muthnabi_quiz_current_user';
@@ -166,7 +166,10 @@ export const authService = {
     // 1. Populate baseline local users
     const localUsers = getLocalUsers();
     Object.values(localUsers).forEach(u => {
-      if (u && u.uid) usersMap[u.uid] = u;
+      if (u && (u.uid || u.id)) {
+        const key = u.uid || u.id;
+        usersMap[key] = { ...u, uid: key };
+      }
     });
 
     // 2. Fetch and merge all registered users from Firestore
@@ -185,28 +188,40 @@ export const authService = {
   },
 
   /**
-   * Delete a contestant profile and associated local attempts
+   * Delete a contestant profile and associated Firestore & local attempts
    */
   async deleteUser(userId) {
     if (!userId) return false;
 
     if (isRealFirebaseConfigured) {
       try {
+        // Delete user document from Firestore 'users' collection
         await deleteDoc(doc(db, 'users', userId));
+
+        // Delete associated attempt documents from Firestore 'quizAttempts' collection
+        const qSnap = await getDocs(query(collection(db, 'quizAttempts'), where('userId', '==', userId)));
+        const deletePromises = [];
+        qSnap.forEach(docSnap => {
+          deletePromises.push(deleteDoc(doc(db, 'quizAttempts', docSnap.id)));
+        });
+        await Promise.all(deletePromises);
       } catch (e) {
         console.warn('Firestore deleteUser error:', e);
       }
     }
 
+    // Clean up local storage user map
     const localUsers = getLocalUsers();
     delete localUsers[userId];
     saveLocalUsers(localUsers);
 
+    // Clear session if logged in user is deleted
     const currentUser = this.getCurrentUser();
-    if (currentUser && currentUser.uid === userId) {
+    if (currentUser && (currentUser.uid === userId || currentUser.id === userId)) {
       localStorage.removeItem(LOCAL_CURRENT_USER_KEY);
     }
 
+    // Clean up local attempts
     try {
       const attemptsData = localStorage.getItem('muthnabi_attempts_data');
       if (attemptsData) {
