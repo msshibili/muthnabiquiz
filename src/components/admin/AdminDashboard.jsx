@@ -64,6 +64,27 @@ export default function AdminDashboard({ onLaunchPreview, onExitAdmin }) {
     }
   };
 
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to delete contestant "${userName || 'User'}"? This action cannot be undone.`)) return;
+    try {
+      await authService.deleteUser(userId);
+      loadAllAdminData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteUsers = async (userIds = []) => {
+    if (!userIds || userIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${userIds.length} selected contestant(s)? This action cannot be undone.`)) return;
+    try {
+      await authService.deleteUsers(userIds);
+      loadAllAdminData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleDuplicateQuiz = async (quizId) => {
     try {
       await quizService.duplicateQuiz(quizId);
@@ -206,6 +227,8 @@ export default function AdminDashboard({ onLaunchPreview, onExitAdmin }) {
           <UserList 
             users={users}
             attempts={attempts}
+            onDeleteUser={handleDeleteUser}
+            onDeleteUsers={handleDeleteUsers}
           />
         )}
       </div>

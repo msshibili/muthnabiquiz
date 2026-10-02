@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
+import ProfSummitBanner from './components/common/ProfSummitBanner';
 import Toast from './components/common/Toast';
 import AuthModal from './components/auth/AuthModal';
 import AdminLoginModal from './components/auth/AdminLoginModal';
@@ -122,6 +123,8 @@ function MainApp() {
           />
         )}
       </main>
+
+      <ProfSummitBanner />
 
       <Footer />
 

@@ -1,6 +1,6 @@
 import { auth, db, isRealFirebaseConfigured } from '../config/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 
 const LOCAL_USERS_KEY = 'muthnabi_quiz_users';
 const LOCAL_CURRENT_USER_KEY = 'muthnabi_quiz_current_user';
@@ -182,5 +182,52 @@ export const authService = {
     }
 
     return Object.values(usersMap);
+  },
+
+  /**
+   * Delete a contestant profile and associated local attempts
+   */
+  async deleteUser(userId) {
+    if (!userId) return false;
+
+    if (isRealFirebaseConfigured) {
+      try {
+        await deleteDoc(doc(db, 'users', userId));
+      } catch (e) {
+        console.warn('Firestore deleteUser error:', e);
+      }
+    }
+
+    const localUsers = getLocalUsers();
+    delete localUsers[userId];
+    saveLocalUsers(localUsers);
+
+    const currentUser = this.getCurrentUser();
+    if (currentUser && currentUser.uid === userId) {
+      localStorage.removeItem(LOCAL_CURRENT_USER_KEY);
+    }
+
+    try {
+      const attemptsData = localStorage.getItem('muthnabi_attempts_data');
+      if (attemptsData) {
+        const attempts = JSON.parse(attemptsData);
+        const filtered = attempts.filter(a => a.userId !== userId);
+        localStorage.setItem('muthnabi_attempts_data', JSON.stringify(filtered));
+      }
+    } catch (e) {
+      console.warn('Error clearing user attempts from localStorage:', e);
+    }
+
+    return true;
+  },
+
+  /**
+   * Delete multiple contestants in bulk
+   */
+  async deleteUsers(userIds = []) {
+    for (const id of userIds) {
+      await this.deleteUser(id);
+    }
+    return true;
   }
 };
