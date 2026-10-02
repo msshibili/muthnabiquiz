@@ -37,12 +37,13 @@ export const authService = {
 
   /**
    * Directly register or login user with Full Name, Mobile Number, Year, and Branch
+   * Always persists profile to Firestore 'users' collection regardless of quiz participation
    */
   async registerUser(name, phoneNumber, year = 'S1', branch = 'CSE') {
     const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber.replace(/\D/g, '')}`;
     const uid = `usr_${formattedPhone.replace(/\D/g, '')}`;
 
-    const userData = {
+    let userData = {
       uid,
       name: name || 'Participant',
       mobile: formattedPhone,
@@ -52,7 +53,7 @@ export const authService = {
       role: 'user'
     };
 
-    // Save to Firestore if connected
+    // Save to Firestore 'users' collection immediately on registration
     if (isRealFirebaseConfigured) {
       try {
         const userRef = doc(db, 'users', uid);
@@ -61,9 +62,17 @@ export const authService = {
           await setDoc(userRef, userData);
         } else {
           const existing = userSnap.data();
-          userData.name = existing.name || userData.name;
-          userData.year = existing.year || userData.year;
-          userData.branch = existing.branch || userData.branch;
+          userData = {
+            ...existing,
+            uid,
+            name: name || existing.name || 'Participant',
+            mobile: formattedPhone,
+            year: year || existing.year || 'S1',
+            branch: branch || existing.branch || 'CSE',
+            createdAt: existing.createdAt || userData.createdAt,
+            role: 'user'
+          };
+          await setDoc(userRef, userData, { merge: true });
         }
       } catch (e) {
         console.warn('Firestore user write error:', e);
@@ -149,22 +158,29 @@ export const authService = {
   },
 
   /**
-   * Fetch all registered users for Admin panel
+   * Fetch all registered users for Admin panel (merges Firestore and local registrations)
    */
   async getAllUsers() {
+    const usersMap = {};
+
+    // 1. Populate baseline local users
+    const localUsers = getLocalUsers();
+    Object.values(localUsers).forEach(u => {
+      if (u && u.uid) usersMap[u.uid] = u;
+    });
+
+    // 2. Fetch and merge all registered users from Firestore
     if (isRealFirebaseConfigured) {
       try {
         const querySnapshot = await getDocs(collection(db, 'users'));
-        const usersList = [];
-        querySnapshot.forEach((doc) => {
-          usersList.push({ uid: doc.id, ...doc.data() });
+        querySnapshot.forEach((docSnap) => {
+          usersMap[docSnap.id] = { uid: docSnap.id, ...docSnap.data() };
         });
-        if (usersList.length > 0) return usersList;
       } catch (e) {
         console.warn('Firestore getAllUsers error:', e);
       }
     }
-    const localUsers = getLocalUsers();
-    return Object.values(localUsers);
+
+    return Object.values(usersMap);
   }
 };
