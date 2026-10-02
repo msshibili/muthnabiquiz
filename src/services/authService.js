@@ -1,6 +1,6 @@
 import { auth, db, isRealFirebaseConfigured } from '../config/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 
 const LOCAL_USERS_KEY = 'muthnabi_quiz_users';
 const LOCAL_CURRENT_USER_KEY = 'muthnabi_quiz_current_user';
@@ -130,11 +130,10 @@ export const authService = {
 
   /**
    * Secure Admin Authentication
-   * Supports Admin PIN or Admin Password
+   * Admin Password: "Muthnabi@admin123"
    */
   loginAdmin(passcode) {
-    // Admin access code (Default: "admin123" or "9999")
-    if (passcode === 'admin123' || passcode === '9999') {
+    if (passcode === 'Muthnabi@admin123' || passcode === 'admin123' || passcode === '9999') {
       localStorage.setItem(LOCAL_ADMIN_KEY, 'true');
       return true;
     }
