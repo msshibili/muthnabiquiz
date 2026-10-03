@@ -2237,6 +2237,13 @@
   border-top: 1px solid var(--border-color);
 }
 
+.prof-summit-banner-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
 .prof-summit-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -2252,6 +2259,7 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .prof-summit-container:hover {
